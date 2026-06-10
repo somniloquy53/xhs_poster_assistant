@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小红书爆款文案改写与 3:4 高清海报生成器</title>
+    <style>
+        /* 💎 Obsidian 暗黑极简科技美学 */
+        :root {
+            --bg-dark: #0A0A0C;
+            --bg-card: #15151A;
+            --bg-input: #1C1C24;
+            --primary-red: #FF2E4D;
+            --accent-green: #10B981;
+            --accent-blue: #3B82F6;
+            --text-main: #E4E6EB;
+            --text-muted: #8E8E9F;
+            --radius-main: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 主容器 */
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 50px;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            text-align: center;
+            padding: 15px 0 5px 0;
+        }
+
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary-red);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* 精美毛卡片 */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius-main);
+            padding: 20px;
+            border: 1px solid #23232C;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-main);
+            border-left: 4px solid var(--primary-red);
+            padding-left: 8px;
+        }
+
+        /* 输入/下拉选择框 */
+        textarea, select, input[type="text"] {
+            width: 100%;
+            background-color: var(--bg-input);
+            border: 1px solid #2D2D3B;
+            border-radius: 10px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            padding: 12px;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        textarea:focus, select:focus, input[type="text"]:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 10px rgba(255, 46, 77, 0.15);
+        }
+
+        textarea {
+            resize: none;
+            min-height: 120px;
+        }
+
+        /* 风格选项 */
+        .row-options {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .row-options label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* 霓虹控制按钮 */
+        button {
+            width: 100%;
+            border-radius: 12px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffffff;
+            cursor: pointer;
+            padding: 14px;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #10B981, #059669);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-blue {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-red {
+            background: linear-gradient(135deg, #FF2E4D, #D61B35);
+            box-shadow: 0 4px 15px rgba(255, 46, 77, 0.25);
+        }
+
+        /* 3:4 黄金海报实时预览区 */
+        .preview-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #posterCanvas {
+            width: 100%;
+            aspect-ratio: 3 / 4; /* 限制手机屏幕展示为 3:4 */
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid #1E1E26;
+            background-color: #000;
+        }
+
+        /* 调节控件 */
+        .control-slider {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-red);
+            height: 6px;
+            background: #252530;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary-red);
+            cursor: pointer;
+        }
+
+        /* 控制面板一排按钮 */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* 隐藏的辅助 canvas (进行真正的高清画质渲染) */
+        #hiddenCanvas {
+            display: none;
+        }
+
+        /* 软版权声明 */
+        .footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #4A4A58;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 顶部 Header -->
+        <div class="header">
+            <h1>✨ 爆款文案美学排版大师 ✨</h1>
+            <p>小红书 / 自媒体运营神器 · 免安装尊享版</p>
+        </div>
+
+        <!-- 卡片一：文案改写引擎 -->
+        <div class="card">
+            <div class="card-title">✍️ 输入/粘贴 您的原始文案</div>
+            <textarea id="srcText" placeholder="在此粘贴生硬的教科书式干货、或者普通的文章段落..."></textarea>
+            
+            <div class="row-options">
+                <label>选择 AI 改写人格:</label>
+                <select id="styleSelector">
+                    <option value="bestie">🎀 闺蜜安利风（软萌种草）</option>
+                    <option value="dry">📚 深度干货风（专业硬核）</option>
+                    <option value="shock">🚨 咆哮震惊风（情绪吸睛）</option>
+                </select>
+            </div>
+
+            <button class="btn-green" onclick="handleRewrite()">⚡ 一键 AI 算法改写</button>
+        </div>
+
+        <!-- 卡片二：伪原创成品输出 -->
+        <div class="card">
+            <div class="card-title" style="color: var(--primary-red);">🚀 爆款 AI 伪原创成果</div>
+            <textarea id="destText" placeholder="改写后的成品文案将在这里显示，自动生成带有美学留白与热门 Hashtags 的排版..." readonly></textarea>
+            
+            <div class="btn-grid">
+                <button class="btn-blue" onclick="copyToClipboard()">📋 复制文案</button>
+                <button class="btn-blue" style="background: #4B5563; box-shadow: none;" onclick="clearAll()">🧹 清空内容</button>
+            </div>
+        </div>
+
+        <!-- 卡片三：小红书 3:4 黄金配图一键生成器 (护城河功能) -->
+        <div class="card">
+            <div class="card-title" style="color: var(--accent-blue);">🎨 小红书 3:4 黄金配图自动排版</div>
+            
+            <div class="row-options">
+                <label>海报视觉模板:</label>
+                <select id="templateSelector" onchange="renderPoster()">
+                    <option value="salt">🖤 极简盐系 (Obsidian Salt-Chic)</option>
+                    <option value="peach">🍑 蜜桃乌龙 (Peach Oolong)</option>
+                    <option value="warning">⚠️ 黄黑暴击 (Warning Neon)</option>
+                </select>
+            </div>
+
+            <input type="text" id="posterTitle" placeholder="写个吸睛的海报大标题（如：避坑！千万别跟风）" value="避坑警告！千万别再跟风了！" oninput="renderPoster()">
+            
+            <!-- 调节海报参数 -->
+            <div class="control-slider">
+                <div class="control-slider-header">
+                    <span>大标题字体大小</span>
+                    <span id="titleSizeVal">64px</span>
+                </div>
+                <input type="range" id="titleSizeSlider" min="40" max="90" value="64" oninput="updateSliderVal('title', this.value)">
+            </div>
+
+            <div class="control-slider">
+                <div class="control-slider-header">
+                    <span>内文字体大小</span>
+                    <span id="bodySizeVal">38px</span>
+                </div>
+                <input type="range" id="bodySizeSlider" min="26" max="55" value="38" oninput="updateSliderVal('body', this.value)">
+            </div>
+
+            <!-- 实时预览区 -->
+            <div class="preview-wrapper">
+                <canvas id="posterCanvas"></canvas>
+            </div>
+
+            <button class="btn-red" onclick="downloadPoster()">📸 一键下载 3:4 超清封面图</button>
+        </div>
+
+        <!-- 软版权 -->
+        <div class="footer">
+            <p>SYSTEM PRO · 100% 纯本地运行 · 隐私数据保护</p>
+        </div>
+    </div>
+
+    <script>
+        // ----------------- 爆款改写数据库 & 算法 -----------------
+        const HOOKS = {
+            bestie: [
+                "🎀 姐妹们！！今天必须给你们扒一扒这个宝藏！！\n",
+                "💖 家人们谁懂啊！亲测好用到哭的宝藏分享，不允许你们不知道！\n",
+                "✨ 悄悄告诉你们一个惊天大秘密，这个东西真的绝绝子！\n"
+            ],
+            dry: [
+                "📌 【硬核预警】全网最全，建议先点赞收藏防迷路！\n",
+                "🧠 【深度解析】熬夜整理！把这个底层的逻辑给你盘明白了！\n",
+                "🎯 【保姆级指南】避坑不踩雷！最适合小白的实操手册。\n"
+            ],
+            shock: [
+                "🚨 听我一句劝！！千万别再盲目跟风了！！\n",
+                "🔥 疯了真的疯了！这简直是降维打击！！\n",
+                "⚠️ 避坑警告！不看这篇你绝对会后悔一整年！！\n"
+            ]
+        };
+
+        const EMOJIS = {
+            bestie: ["🎀", "💖", "✨", "🌸", "🥺", "🛍️", "💄", "🌈"],
+            dry: ["📌", "🎯", "🧠", "📝", "💡", "🔍", "📈", "⚙️"],
+            shock: ["🚨", "🔥", "⚠️", "💥", "😱", "🛑", "💯", "❌"]
+        };
+
+        const FOOTERS = {
+            bestie: "\n\n#宝藏女孩 #好物推荐 #小红书爆款 #女生必看 #闺蜜安利 #日常分享 ✨",
+            dry: "\n\n#提升自己 #干货分享 #学习打卡 #思维模型 #自我成长 #程序员日常 🚀",
+            shock: "\n\n#避坑指南 #震惊幕后 #绝了 #听我一句劝 #爆款打造 #不看后悔系列 🚨"
+        };
+
+        function handleRewrite() {
+            const srcText = document.getElementById("srcText").value.trim();
+            if (!srcText) {
+                alert("请输入或粘贴一些原始文案！");
+                return;
+            }
+            
+            const style = document.getElementById("styleSelector").value;
+            
+            // 语义拆分行
+            const lines = srcText.split("\n").map(l => l.trim()).filter(l => l.length > 5);
+            if (lines.length === 0) {
+                lines.push(srcText);
+            }
+
+            const cleanLines = lines.slice(0, 8); // 限制 8 行
+
+            let output = [];
+            // Header
+            output.push(randomChoice(HOOKS[style]));
+            output.push("━━━━━━━━━━━━━━━━━━━\n");
+
+            // Body Lines with Emojis
+            cleanLines.forEach((line, idx) => {
+                const emo1 = randomChoice(EMOJIS[style]);
+                const emo2 = randomChoice(EMOJIS[style]);
+                
+                // 闺蜜风修辞替换
+                if (style === "bestie") {
+                    line = line.replace(/建议/g, "闭眼听劝").replace(/好/g, "绝绝子").replace(/重要/g, "重要到哭");
+                }
+                
+                if (style === "dry") {
+                    output.push(`0${idx+1} 【核心】${line} ${emo1}\n`);
+                } else if (style === "shock") {
+                    output.push(`${emo1} ${line}！！！\n`);
+                } else {
+                    output.append = output.push(`${emo1} ${line} ${emo2}\n`);
+                }
+            });
+
+            output.push("\n━━━━━━━━━━━━━━━━━━━");
+            output.push(FOOTERS[style]);
+
+            const finalText = output.join("\n");
+            document.getElementById("destText").value = finalText;
+
+            // 自动同步部分文案到海报大文本输入框
+            if (lines[0]) {
+                const cleanTitle = lines[0].slice(0, 14);
+                document.getElementById("posterTitle").value = cleanTitle;
+            }
+            
+            renderPoster(); // 重新绘制海报
+        }
+
+        function randomChoice(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function clearAll() {
+            document.getElementById("srcText").value = "";
+            document.getElementById("destText").value = "";
+        }
+
+        function copyToClipboard() {
+            const destText = document.getElementById("destText").value;
+            if (!destText) {
+                alert("没有可复制的文案！");
+                return;
+            }
+            navigator.clipboard.writeText(destText).then(() => {
+                alert("📋 文案已成功复制到手机剪贴板！");
+            }).catch(err => {
+                alert("复制失败，请手动长按选择复制！");
+            });
+        }
+
+
+        // ----------------- 3:4 超清 Canvas 海报生成逻辑 -----------------
+        const canvas = document.getElementById("posterCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // 设置高清分辨率，超采样 (1200 x 1600 px)
+        const renderWidth = 1200;
+        const renderHeight = 1600;
+        canvas.width = renderWidth;
+        canvas.height = renderHeight;
+
+        let titleFontSize = 64;
+        let bodyFontSize = 38;
+
+        function updateSliderVal(type, val) {
+            if (type === 'title') {
+                titleFontSize = parseInt(val);
+                document.getElementById("titleSizeVal").innerText = val + "px";
+            } else {
+                bodyFontSize = parseInt(val);
+                document.getElementById("bodySizeVal").innerText = val + "px";
+            }
+            renderPoster();
+        }
+
+        function renderPoster() {
+            const title = document.getElementById("posterTitle").value.trim() || "小红书爆款标题";
+            const template = document.getElementById("templateSelector").value;
+            const destText = document.getElementById("destText").value.trim();
+            
+            // 解析出内文列表 (剔除 header/footer，只保留正文要点)
+            let bodyLines = [];
+            if (destText) {
+                const textParts = destText.split("\n");
+                bodyLines = textParts.filter(line => {
+                    return line.length > 5 && !line.includes("━━━━━━━━") && !line.includes("#") && !line.includes("🎀") && !line.includes("📌") && !line.includes("🚨") && !line.includes("🔥") && !line.includes("💖") && !line.includes("✨") && !line.includes("🦄");
+                });
+            }
+            
+            // 兜底默认内文
+            if (bodyLines.length === 0) {
+                bodyLines = [
+                    "👉 痛点解析：看完了还是不会运营？",
+                    "👉 核心干货：手把手带你搭建自己的商业闭环",
+                    "👉 实操指南：纯本地免服务器运行，隐私无泄漏",
+                    "👉 避坑干货：别再交智商税，用这个工具就够了"
+                ];
+            }
+
+            ctx.clearRect(0, 0, renderWidth, renderHeight);
+
+            // 🎨 模板一：极简盐系 (Obsidian Salt-Chic)
+            if (template === "salt") {
+                // 背景渐变
+                let grad = ctx.createLinearGradient(0, 0, 0, renderHeight);
+                grad.addColorStop(0, "#16161A");
+                grad.addColorStop(1, "#0A0A0C");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, renderWidth, renderHeight);
+
+                // 绘制荧光粉边框
+                ctx.strokeStyle = "#FF2E4D";
+                ctx.lineWidth = 10;
+                ctx.strokeRect(30, 30, renderWidth - 60, renderHeight - 60);
+
+                // 顶底点缀
+                ctx.fillStyle = "#FF2E4D";
+                ctx.fillRect(70, 70, 12, 12);
+                ctx.fillRect(renderWidth - 82, renderHeight - 82, 12, 12);
+
+                // 绘制霓虹大标题
+                ctx.font = `bold ${titleFontSize}px "Microsoft YaHei", sans-serif`;
+                ctx.fillStyle = "#FFFFFF";
+                ctx.textAlign = "center";
+                drawWrappedText(ctx, title, renderWidth / 2, 200, 1000, titleFontSize + 15);
+
+                // 分割线
+                ctx.fillStyle = "#333340";
+                ctx.fillRect(100, 360, renderWidth - 200, 4);
+
+                // 绘制内文要点
+                ctx.textAlign = "left";
+                ctx.fillStyle = "#E4E6EB";
+                ctx.font = `${bodyFontSize}px "Microsoft YaHei", sans-serif`;
+                
+                let startY = 460;
+                bodyLines.slice(0, 6).forEach((line, index) => {
+                    drawWrappedText(ctx, `🔥  ${line}`, 120, startY, 960, bodyFontSize + 20);
+                    startY += (bodyFontSize + 35) * Math.ceil(ctx.measureText(line).width / 960);
+                });
+
+                // 底部水印
+                ctx.fillStyle = "#555566";
+                ctx.font = `bold 24px "Consolas", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText("SYSTEM PRO | AUTONOMOUS GENERATOR", renderWidth / 2, renderHeight - 100);
+            }
+
+            // 🍑 模板二：蜜桃乌龙 (Peach Oolong)
+            else if (template === "peach") {
+                // 水蜜桃温润渐变背景
+                let grad = ctx.createLinearGradient(0, 0, renderWidth, renderHeight);
+                grad.addColorStop(0, "#FFAAA6");
+                grad.addColorStop(1, "#FFD3B6");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, renderWidth, renderHeight);
+
+                // 珊瑚色圆润边框
+                ctx.strokeStyle = "#FF8B94";
+                ctx.lineWidth = 14;
+                ctx.strokeRect(35, 35, renderWidth - 70, renderHeight - 70);
+
+                // 标题
+                ctx.font = `bold ${titleFontSize}px "Microsoft YaHei", sans-serif`;
+                ctx.fillStyle = "#5E4E4D";
+                ctx.textAlign = "center";
+                drawWrappedText(ctx, "🎀 " + title + " 🎀", renderWidth / 2, 220, 1000, titleFontSize + 15);
+
+                // 珊瑚红分割条
+                ctx.fillStyle = "#FF8B94";
+                ctx.fillRect(200, 370, renderWidth - 400, 8);
+
+                // 绘制内文
+                ctx.textAlign = "left";
+                ctx.fillStyle = "#6F5C5B";
+                ctx.font = `bold ${bodyFontSize}px "Microsoft YaHei", sans-serif`;
+                
+                let startY = 480;
+                bodyLines.slice(0, 6).forEach((line, index) => {
+                    drawWrappedText(ctx, `🌸  ${line}`, 140, startY, 920, bodyFontSize + 20);
+                    startY += (bodyFontSize + 38) * Math.ceil(ctx.measureText(line).width / 920);
+                });
+
+                // 底部水印
+                ctx.fillStyle = "#A28F8E";
+                ctx.font = `bold 26px "Microsoft YaHei", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText("✨ 宝藏博主的日常干货分享 ✨", renderWidth / 2, renderHeight - 110);
+            }
+
+            // ⚠️ 模板三：黄黑暴击 (Warning Neon)
+            else if (template === "warning") {
+                // 工业醒目黄背景
+                ctx.fillStyle = "#FFE100";
+                ctx.fillRect(0, 0, renderWidth, renderHeight);
+
+                // 警示斜纹边框
+                ctx.fillStyle = "#111111";
+                // 顶部警示条
+                ctx.fillRect(0, 0, renderWidth, 60);
+                // 底部警示条
+                ctx.fillRect(0, renderHeight - 60, renderWidth, 60);
+
+                // 黄黑条纹斜线（经典警示纹）
+                ctx.strokeStyle = "#FFE100";
+                ctx.lineWidth = 8;
+                for (let i = 0; i < renderWidth; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i + 30, 60);
+                    ctx.stroke();
+                }
+
+                // 大标题
+                ctx.font = `900 ${titleFontSize}px "Microsoft YaHei", sans-serif`;
+                ctx.fillStyle = "#111111";
+                ctx.textAlign = "center";
+                drawWrappedText(ctx, "🚨 " + title, renderWidth / 2, 230, 1000, titleFontSize + 15);
+
+                // 双黑线分割
+                ctx.fillStyle = "#111111";
+                ctx.fillRect(100, 380, renderWidth - 200, 8);
+                ctx.fillRect(100, 395, renderWidth - 200, 3);
+
+                // 绘制内文
+                ctx.textAlign = "left";
+                ctx.fillStyle = "#222222";
+                ctx.font = `900 ${bodyFontSize}px "Microsoft YaHei", sans-serif`;
+                
+                let startY = 490;
+                bodyLines.slice(0, 6).forEach((line, index) => {
+                    drawWrappedText(ctx, `▶  ${line}`, 130, startY, 940, bodyFontSize + 22);
+                    startY += (bodyFontSize + 40) * Math.ceil(ctx.measureText(line).width / 940);
+                });
+
+                // 底部水印
+                ctx.fillStyle = "#111111";
+                ctx.font = `bold 28px "Consolas", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText("WARNING // HIGHLY RECOMMENDED SYSTEM", renderWidth / 2, renderHeight - 110);
+            }
+        }
+
+        // 📝 canvas 文本自动换行和美学绘制
+        function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
+            const words = text.split("");
+            let line = "";
+            let currentY = y;
+
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n];
+                let metrics = context.measureText(testLine);
+                let testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    context.fillText(line, x, currentY);
+                    line = words[n];
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, x, currentY);
+        }
+
+        // 📸 海报一键超清下载 (完美支持手机浏览器长按保存或自动触发下载)
+        function downloadPoster() {
+            const link = document.createElement("a");
+            link.download = `xiaohongshu_poster_${Date.now()}.png`;
+            link.href = canvas.toDataURL("image/png");
+            
+            // 触发下载
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert("📸 高清海报已生成！如果手机端未能自动保存，请长按下方海报实时预览卡片直接‘存储到相册’。");
+        }
+
+        // 页面首次载入自动绘制一幅默认海报
+        window.onload = function() {
+            renderPoster();
+        }
+    </script>
+</body>
+</html>

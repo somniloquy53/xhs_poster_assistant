@@ -1,0 +1,8 @@
+﻿# 临时编译缓存文件
+build/
+dist/
+__pycache__/
+*.spec
+
+# 个人敏感隐私 Cookie
+xhs_cookie.txt
