@@ -6,3 +6,10 @@ __pycache__/
 
 # 个人敏感隐私 Cookie
 xhs_cookie.txt
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
