@@ -247,13 +247,13 @@
             <p>小红书 / 自媒体运营神器 · 免安装尊享版</p>
         </div>
 
-        <!-- 卡片一：文案改写引擎 -->
+        <!-- 卡片一：智能引擎 -->
         <div class="card">
-            <div class="card-title">✍️ 输入/粘贴 您的原始文案</div>
-            <textarea id="srcText" placeholder="在此粘贴生硬的教科书式干货、或者普通的文章段落..."></textarea>
+            <div class="card-title">🤖 AI 智能识别区</div>
+            <textarea id="srcText" placeholder="🚀 魔法开始：在此粘贴小红书/网页链接，或者直接粘贴生硬的文案..."></textarea>
             
             <div class="row-options">
-                <label>选择 AI 改写人格:</label>
+                <label>智能人格:</label>
                 <select id="styleSelector">
                     <option value="bestie">🎀 闺蜜安利风（软萌种草）</option>
                     <option value="dry">📚 深度干货风（专业硬核）</option>
@@ -261,7 +261,11 @@
                 </select>
             </div>
 
-            <button class="btn-green" onclick="handleRewrite()">⚡ 一键 AI 算法改写</button>
+            <!-- 全新的一键智能处理大按钮 -->
+            <button class="btn-green" onclick="handleSmartProcess()" id="smartBtn">
+                ✨ 一键智能识别并生成全部 (文案+海报)
+            </button>
+            <p id="loadingStatus" style="display:none; color: var(--accent-green); font-size: 0.85rem; text-align: center; margin-top: 5px;">🔄 正在云端智能提取并排版中，请稍候...</p>
         </div>
 
         <!-- 卡片二：伪原创成品输出 -->
@@ -353,19 +357,93 @@
             shock: "\n\n#避坑指南 #震惊幕后 #绝了 #听我一句劝 #爆款打造 #不看后悔系列 🚨"
         };
 
-        function handleRewrite() {
-            const srcText = document.getElementById("srcText").value.trim();
-            if (!srcText) {
-                alert("请输入或粘贴一些原始文案！");
+        // ----------------- 魔法一键智能引擎 -----------------
+        async function handleSmartProcess() {
+            const srcInput = document.getElementById("srcText").value.trim();
+            const btn = document.getElementById("smartBtn");
+            const status = document.getElementById("loadingStatus");
+            
+            if (!srcInput) {
+                alert("🔮 请先粘贴一段网址或者文案！");
                 return;
             }
-            
+
+            // 状态 UI 切换
+            btn.style.opacity = "0.5";
+            btn.innerText = "⏳ 正在魔法处理中...";
+            status.style.display = "block";
+
+            let finalRawText = srcInput;
+
+            // 1. 智能检测是否包含 URL
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const match = srcInput.match(urlRegex);
+
+            if (match) {
+                const url = match[0];
+                status.innerText = `🔍 检测到网址，正在云端智能提取正文...`;
+                try {
+                    // 使用极其稳定的全能 CORS 跨域代理进行云端无头抓取
+                    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const data = await response.json();
+                    
+                    if (data.contents) {
+                        // 强大的 HTML 清洗正则
+                        let cleanText = data.contents
+                            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                            .replace(/<[^>]+>/g, ' ') // 去除所有 HTML 标签
+                            .replace(/&nbsp;/g, ' ')
+                            .replace(/\s+/g, ' ')     // 合并多余空格
+                            .trim();
+
+                        // 智能截取可能的主体部分 (简单启发式)
+                        if (cleanText.length > 2000) {
+                            // 尝试找到中文字符密集区
+                            const chineseSegments = cleanText.match(/[\u4e00-\u9fa5，。！？]{10,}/g);
+                            if(chineseSegments && chineseSegments.length > 0){
+                                finalRawText = chineseSegments.join("\n").substring(0, 1500);
+                            } else {
+                                finalRawText = cleanText.substring(0, 1500);
+                            }
+                        } else {
+                            finalRawText = cleanText;
+                        }
+                        status.innerText = `🎉 网页文案提取成功！正在排版...`;
+                    } else {
+                        throw new Error('No content returned from proxy');
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    status.innerText = `⚠️ 网页风控极强提取失败，已自动降级为直接处理您输入的文本。`;
+                }
+            } else {
+                 status.innerText = `💡 识别为纯文本，正在执行 AI 爆款重构...`;
+            }
+
+            // 给 UI 一点呼吸时间展示状态
+            setTimeout(() => {
+                // 2. 将清洗后的文本送入改写引擎
+                document.getElementById("srcText").value = finalRawText; // 将左侧更新为清洗后的纯净文本
+                executeRewriteLogic(finalRawText);
+                
+                // 3. 恢复 UI
+                btn.style.opacity = "1";
+                btn.innerText = "✨ 一键智能识别并生成全部 (文案+海报)";
+                status.innerText = "✅ 魔法完成！您的文案和专属海报已准备就绪。";
+                setTimeout(() => { status.style.display = "none"; }, 3000);
+            }, 800);
+        }
+
+        function executeRewriteLogic(srcText) {
             const style = document.getElementById("styleSelector").value;
             
             // 语义拆分行
-            const lines = srcText.split("\n").map(l => l.trim()).filter(l => l.length > 5);
+            const lines = srcText.split(/[\n。！？]/).map(l => l.trim()).filter(l => l.length > 5);
             if (lines.length === 0) {
-                lines.push(srcText);
+                lines.push(srcText.substring(0, 50)); // 随便拿点东西兜底
             }
 
             const cleanLines = lines.slice(0, 8); // 限制 8 行
@@ -390,7 +468,7 @@
                 } else if (style === "shock") {
                     output.push(`${emo1} ${line}！！！\n`);
                 } else {
-                    output.append = output.push(`${emo1} ${line} ${emo2}\n`);
+                    output.push(`${emo1} ${line} ${emo2}\n`);
                 }
             });
 
@@ -402,11 +480,21 @@
 
             // 自动同步部分文案到海报大文本输入框
             if (lines[0]) {
-                const cleanTitle = lines[0].slice(0, 14);
+                const cleanTitle = lines[0].slice(0, 16);
                 document.getElementById("posterTitle").value = cleanTitle;
             }
             
             renderPoster(); // 重新绘制海报
+        }
+
+        // 兼容保留原来的点击按钮事件（直接调用核心逻辑）
+        function handleRewrite() {
+            const srcText = document.getElementById("srcText").value.trim();
+            if (!srcText) {
+                alert("请输入或粘贴一些原始文案！");
+                return;
+            }
+            executeRewriteLogic(srcText);
         }
 
         function randomChoice(arr) {
