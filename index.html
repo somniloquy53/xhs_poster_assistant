@@ -79,6 +79,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            width:100%;
         }
 
         .card-title {
@@ -240,32 +241,39 @@
 </head>
 <body>
 
-    <div class="container">
-        <!-- 顶部 Header -->
+        <!-- 顶栏介绍 -->
         <div class="header">
             <h1>✨ 爆款文案美学排版大师 ✨</h1>
-            <p>小红书 / 自媒体运营神器 · 免安装尊享版</p>
+            <p>手机专用 · 小红书一键排版配图神器</p>
         </div>
 
-        <!-- 卡片一：智能引擎 -->
+        <!-- 👑 终极核心卡片：一键智能剪贴板导入区 -->
+        <div class="card" style="border: 2px solid var(--primary-red); box-shadow: 0 0 25px rgba(255, 46, 77, 0.25);">
+            <div class="card-title" style="color: var(--primary-red);">📋 剪贴板智能魔法区</div>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 5px;">
+                💡 <b>最爽的操作方式：</b>在小红书直接点击“复制文案”，回到这里点下面这个按钮，一秒钟直接搞定文案改写和高清配图！
+            </p>
+            
+            <button class="btn-red" onclick="handleClipboardSmartImport()" id="smartBtn" style="font-size: 1.05rem; padding: 16px;">
+                ✨ 一键智能读取剪贴板并生成全部
+            </button>
+            <p id="loadingStatus" style="display:none; color: var(--accent-green); font-size: 0.85rem; text-align: center; margin-top: 5px;">⚡ 已成功捕获剪贴板并完成智能改写与海报绘制！</p>
+        </div>
+
+        <!-- 卡片二：手动内容微调区 -->
         <div class="card">
-            <div class="card-title">🤖 AI 智能识别区</div>
-            <textarea id="srcText" placeholder="🚀 魔法开始：在此粘贴小红书/网页链接，或者直接粘贴生硬的文案..."></textarea>
+            <div class="card-title">✍️ 文案编辑器 (可手动微调)</div>
             
             <div class="row-options">
-                <label>智能人格:</label>
-                <select id="styleSelector">
+                <label>切换 AI 人格:</label>
+                <select id="styleSelector" onchange="handleRewrite()">
                     <option value="bestie">🎀 闺蜜安利风（软萌种草）</option>
                     <option value="dry">📚 深度干货风（专业硬核）</option>
                     <option value="shock">🚨 咆哮震惊风（情绪吸睛）</option>
                 </select>
             </div>
-
-            <!-- 全新的一键智能处理大按钮 -->
-            <button class="btn-green" onclick="handleSmartProcess()" id="smartBtn">
-                ✨ 一键智能识别并生成全部 (文案+海报)
-            </button>
-            <p id="loadingStatus" style="display:none; color: var(--accent-green); font-size: 0.85rem; text-align: center; margin-top: 5px;">🔄 正在云端智能提取并排版中，请稍候...</p>
+            
+            <textarea id="srcText" placeholder="这里会显示导入的纯正文内容，您也可以在这里手动输入、微调文案..." oninput="handleRewrite()"></textarea>
         </div>
 
         <!-- 卡片二：伪原创成品输出 -->
@@ -357,84 +365,101 @@
             shock: "\n\n#避坑指南 #震惊幕后 #绝了 #听我一句劝 #爆款打造 #不看后悔系列 🚨"
         };
 
-        // ----------------- 魔法一键智能引擎 -----------------
-        async function handleSmartProcess() {
-            const srcInput = document.getElementById("srcText").value.trim();
+        // ----------------- 魔法一键智能剪贴板导入引擎 -----------------
+        async function handleClipboardSmartImport() {
             const btn = document.getElementById("smartBtn");
             const status = document.getElementById("loadingStatus");
             
-            if (!srcInput) {
-                alert("🔮 请先粘贴一段网址或者文案！");
-                return;
-            }
-
-            // 状态 UI 切换
-            btn.style.opacity = "0.5";
-            btn.innerText = "⏳ 正在魔法处理中...";
-            status.style.display = "block";
-
-            let finalRawText = srcInput;
-
-            // 1. 智能检测是否包含 URL
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            const match = srcInput.match(urlRegex);
-
-            if (match) {
-                const url = match[0];
-                status.innerText = `🔍 检测到网址，正在云端智能提取正文...`;
-                try {
-                    // 使用极其稳定的全能 CORS 跨域代理进行云端无头抓取
-                    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const data = await response.json();
-                    
-                    if (data.contents) {
-                        // 强大的 HTML 清洗正则
-                        let cleanText = data.contents
-                            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-                            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-                            .replace(/<[^>]+>/g, ' ') // 去除所有 HTML 标签
-                            .replace(/&nbsp;/g, ' ')
-                            .replace(/\s+/g, ' ')     // 合并多余空格
-                            .trim();
-
-                        // 智能截取可能的主体部分 (简单启发式)
-                        if (cleanText.length > 2000) {
-                            // 尝试找到中文字符密集区
-                            const chineseSegments = cleanText.match(/[\u4e00-\u9fa5，。！？]{10,}/g);
-                            if(chineseSegments && chineseSegments.length > 0){
-                                finalRawText = chineseSegments.join("\n").substring(0, 1500);
-                            } else {
-                                finalRawText = cleanText.substring(0, 1500);
-                            }
-                        } else {
-                            finalRawText = cleanText;
-                        }
-                        status.innerText = `🎉 网页文案提取成功！正在排版...`;
-                    } else {
-                        throw new Error('No content returned from proxy');
-                    }
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    status.innerText = `⚠️ 网页风控极强提取失败，已自动降级为直接处理您输入的文本。`;
-                }
-            } else {
-                 status.innerText = `💡 识别为纯文本，正在执行 AI 爆款重构...`;
-            }
-
-            // 给 UI 一点呼吸时间展示状态
-            setTimeout(() => {
-                // 2. 将清洗后的文本送入改写引擎
-                document.getElementById("srcText").value = finalRawText; // 将左侧更新为清洗后的纯净文本
-                executeRewriteLogic(finalRawText);
+            try {
+                // 1. 设置加载状态
+                btn.style.opacity = "0.5";
+                btn.innerText = "⏳ 正在读取系统剪贴板...";
+                status.style.color = "var(--text-muted)";
+                status.innerText = "正在向系统索要剪贴板权限...";
+                status.style.display = "block";
                 
-                // 3. 恢复 UI
+                // 2. 请求并读取剪贴板内容
+                const text = await navigator.clipboard.readText();
+                if (!text.trim()) {
+                    alert("📋 您的剪贴板目前是空的！请先在小红书复制文案哦~");
+                    btn.style.opacity = "1";
+                    btn.innerText = "✨ 一键智能读取剪贴板并生成全部";
+                    status.style.display = "none";
+                    return;
+                }
+                
+                // 3. 强大的小红书分享噪声过滤正则
+                // 过滤：例如 "73 粉丝群已建立... 复制本条信息... https://xhslink.com/xxxx"
+                let cleanText = text
+                    .replace(/复制本条信息.*?打开小红书.*?查看精彩内容！/gi, '')
+                    .replace(/https?:\/\/xhslink\.com\/[a-zA-Z0-9\/]+/gi, '')
+                    .replace(/http[s]?:\/\/[^\s]+/gi, '') // 去除所有其他链接
+                    .replace(/[\d]+.*?粉丝群已建立/gi, '')
+                    .trim();
+                
+                if (cleanText.length < 5) {
+                    // 如果过滤完太短，说明剪贴板内容没有有用的文本，直接使用原剪贴板内容
+                    cleanText = text;
+                }
+                
+                // 4. 将清洗后的文本送入编辑器
+                document.getElementById("srcText").value = cleanText;
+                
+                // 5. 运行高能重写排版
+                executeRewriteLogic(cleanText);
+                
+                // 6. 恢复 UI 并提示成功
                 btn.style.opacity = "1";
-                btn.innerText = "✨ 一键智能识别并生成全部 (文案+海报)";
-                status.innerText = "✅ 魔法完成！您的文案和专属海报已准备就绪。";
-                setTimeout(() => { status.style.display = "none"; }, 3000);
-            }, 800);
+                btn.innerText = "✨ 一键智能读取剪贴板并生成全部";
+                status.style.color = "var(--accent-green)";
+                status.innerText = "✅ 智能导入成功！已自动帮您过滤分享杂音并生成完毕 💚";
+                
+                setTimeout(() => { status.style.display = "none"; }, 4000);
+                
+            } catch (err) {
+                console.error("Failed to read clipboard:", err);
+                btn.style.opacity = "1";
+                btn.innerText = "✨ 一键智能读取剪贴板并生成全部";
+                status.style.display = "none";
+                
+                alert("🔒 读取剪贴板受阻！\n\n原因：由于手机浏览器安全限制，首次使用需要您点击弹出提示中的‘允许访问剪贴板’。\n\n💡 备用方法：如果权限被拒绝，您也可以直接在下方的‘文案编辑器’输入框里直接长按选择‘粘贴’，系统同样会自动为您进行高能改写和排版海报！");
+            }
+        }
+
+        // 豪华同义词 & 近义词爆款词槽矩阵
+        const SYNONYMS_MATRIX = {
+            "建议": ["姐妹们闭眼听劝", "强烈安利大家", "真心建议锁死", "听劝！必须无脑入手", "敲黑板划重点"],
+            "好": ["绝绝子", "亲测好用到哭", "神仙单品", "无脑入不亏", "闭眼入不后悔", "妥妥的智商高标杆"],
+            "推荐": ["疯狂安利", "听劝！必须锁死", "强烈投币推荐", "吐血整理推荐", "无限回购神作"],
+            "非常": ["巨", "超级", "真的绝了", "极其", "妥妥的", "宇宙级"],
+            "重要": ["重要到哭", "关乎成败的命根子", "必须死死记住的考点", "不看毁一生的硬指标", "天大级别的核心点"],
+            "简单": ["保姆级小白操作", "有手就会", "1秒上手", "极其无脑省心", "无脑极简式流程"],
+            "方法": ["神级绝招", "私藏底层逻辑", "破局大招", "隐藏外挂", "致胜秘籍"],
+            "有用": ["纯纯的降维打击", "纯干货无废话", "妥妥的真香定律", "强悍到颠覆认知"],
+            "干货": ["避坑指南", "私藏底层常识", "保姆级干货", "干货大集合"],
+            "喜欢": ["爱到不行", "彻底被征服", "疯狂心动", "直接沦陷", "直接疯狂种草"],
+            "怎么": ["如何无脑上手", "到底是怎么弄的", "究竟是怎么做到的", "最无脑的操作方式"]
+        };
+
+        const EMOTIONAL_MODIFIERS = [
+            "天呐，", "真的绝了！", "亲测有效，", "简直太省心了！", "妥妥的真香！", "不允许你们不知道："
+        ];
+
+        function performMatrixReplace(line) {
+            // 随机在句首加入情绪词
+            if (Math.random() < 0.25) {
+                line = randomChoice(EMOTIONAL_MODIFIERS) + line;
+            }
+            
+            for (const [word, alternatives] of Object.entries(SYNONYMS_MATRIX)) {
+                if (line.includes(word)) {
+                    // 85% 概率执行同义词替换
+                    if (Math.random() < 0.85) {
+                        line = line.replaceAll(word, randomChoice(alternatives));
+                    }
+                }
+            }
+            return line;
         }
 
         function executeRewriteLogic(srcText) {
@@ -458,10 +483,8 @@
                 const emo1 = randomChoice(EMOJIS[style]);
                 const emo2 = randomChoice(EMOJIS[style]);
                 
-                // 闺蜜风修辞替换
-                if (style === "bestie") {
-                    line = line.replace(/建议/g, "闭眼听劝").replace(/好/g, "绝绝子").replace(/重要/g, "重要到哭");
-                }
+                // 执行矩阵混沌重组
+                line = performMatrixReplace(line);
                 
                 if (style === "dry") {
                     output.push(`0${idx+1} 【核心】${line} ${emo1}\n`);
